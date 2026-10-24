@@ -1,0 +1,44 @@
+{
+  "name": "dsh-task-tree",
+  "version": "0.1.0",
+  "description": "A draggable task-tree panel for DeepSeek Harness: capture tasks by voice or text, reorder by dragging, and keep the priority readable at a glance.",
+  "license": "MIT",
+  "author": "RAK7S",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RAK7S/dsh-task-tree.git"
+  },
+  "homepage": "https://github.com/RAK7S/dsh-task-tree",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "task",
+    "todo",
+    "voice"
+  ],
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "icon.svg",
+    "locale/",
+    "README.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "immediately": true
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Task Tree">
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="#171a21"/>
+  <path d="M22 14v30" stroke="#d8deea" stroke-width="4" stroke-linecap="round"/>
+  <path d="M22 26h18" stroke="#d8deea" stroke-width="4" stroke-linecap="round"/>
+  <path d="M22 38h18" stroke="#8f9bb3" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="22" cy="14" r="5" fill="#d8deea"/>
+  <circle cx="44" cy="26" r="4.5" fill="#57c98a"/>
+  <circle cx="44" cy="38" r="4.5" fill="#8f9bb3"/>
+  <path d="M40 50l4 4 8-9" stroke="#57c98a" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
