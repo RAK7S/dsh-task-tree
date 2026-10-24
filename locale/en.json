@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Task Tree",
+    "description": "A collapsible floating panel that shows the task queue as a tree and lets you add, tick, park or delete tasks."
+  }
+}
