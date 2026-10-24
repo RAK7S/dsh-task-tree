@@ -1,6 +1,6 @@
 {
   "name": "dsh-task-tree",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A draggable task-tree panel for DeepSeek Harness: capture tasks by voice or text, reorder by dragging, and keep the priority readable at a glance.",
   "license": "MIT",
   "author": "RAK7S",

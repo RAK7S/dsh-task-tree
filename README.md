@@ -25,8 +25,8 @@ A small, opinionated task tree that lives **inside** DeepSeek Harness — not an
 ### 手动
 
 ```bash
-npm i dsh-task-tree
-# 或把 release 里的 tgz 解压到 profile 的 node_modules
+# 从 Releases 下载 dsh-task-tree-0.1.0.tgz，解压进 profile 的 node_modules：
+#   <profile>/node_modules/dsh-task-tree/
 ```
 
 然后确认 profile 的 `package.json` 里：

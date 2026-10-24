@@ -124,12 +124,40 @@ window.__ModuleLoader__.load({
       hint: { fontSize: 10.5, color: V.fg2, display: 'flex', justifyContent: 'space-between', gap: 8 },
     }
 
+    function sideOfRect(left, width) {
+      const W = window.innerWidth
+      if (left <= 9) return 'l'
+      if (left + width >= W - 9) return 'r'
+      return 'free'
+    }
+
+    const PILL = 46
+    const clampX = (x, w) => Math.max(8, Math.min(x, Math.max(8, window.innerWidth - w - 8)))
+    const clampY = (y, h) => Math.max(8, Math.min(y, Math.max(8, window.innerHeight - h - 8)))
+    const panelSize = () => ({
+      w: Math.min(404, window.innerWidth - 16),
+      h: Math.min(Math.round(window.innerHeight * 0.74), window.innerHeight - 16),
+    })
+
+    /* 一个坐标（方块）决定一切：展开方向由「方块在屏幕哪半边」决定。
+       水平朝屏幕内侧；垂直优先向上，上面放不下才向下。 */
+    function anchorPanel(p) {
+      const { w, h } = panelSize()
+      const GAP = 8
+      const LIFT = 6
+      const cx = p.x + PILL / 2
+      const x = cx < window.innerWidth / 2 ? p.x : p.x + PILL - w
+      let y = p.y - h - LIFT
+      if (y < GAP) y = p.y + PILL + LIFT
+      return { left: clampX(x, w), top: clampY(y, h) }
+    }
+
     function loadPos() {
       try {
         const raw = window.localStorage.getItem(POS_KEY)
         if (!raw) return null
         const p = JSON.parse(raw)
-        if (typeof p.x === 'number' && typeof p.y === 'number') return p
+        if (typeof p.x === 'number' && typeof p.y === 'number') return { x: p.x, y: p.y }
       } catch {}
       return null
     }
@@ -179,30 +207,6 @@ window.__ModuleLoader__.load({
       return window.btoa(bin)
     }
 
-    // 收起时：贴着离面板中心最近的那条边，形成独立小方块（不是固定角落）
-    function dockToEdge(rect) {
-      const W = window.innerWidth
-      const H = window.innerHeight
-      const size = 46
-      const M = 12
-      const cx = rect.left + rect.width / 2
-      const cy = rect.top + rect.height / 2
-      const dl = cx
-      const dr = W - cx
-      const dt = cy
-      const db = H - cy
-      const min = Math.min(dl, dr, dt, db)
-      if (min === dl) {
-        return { x: M, y: Math.max(M, Math.min(H - size - M, cy - size / 2)) }
-      }
-      if (min === dr) {
-        return { x: W - size - M, y: Math.max(M, Math.min(H - size - M, cy - size / 2)) }
-      }
-      if (min === dt) {
-        return { x: Math.max(M, Math.min(W - size - M, cx - size / 2)), y: M }
-      }
-      return { x: Math.max(M, Math.min(W - size - M, cx - size / 2)), y: H - size - M }
-    }
 
     function clampToScreen(x, y, w, hgt) {
       const maxX = Math.max(8, window.innerWidth - w - 8)
@@ -215,6 +219,7 @@ window.__ModuleLoader__.load({
         try { return window.localStorage.getItem(OPEN_KEY) === '1' } catch { return false }
       })
       const [pos, setPos] = useState(loadPos)
+      const [free, setFree] = useState(null)
       const [data, setData] = useState(null)
       const [err, setErr] = useState('')
       const [draft, setDraft] = useState('')
@@ -281,9 +286,21 @@ window.__ModuleLoader__.load({
       const movePanelDrag = (e) => {
         const d = dragPanel.current
         if (!d) return
-        setPos(clampToScreen(e.clientX - d.dx, e.clientY - d.dy, d.w, Math.min(d.h, window.innerHeight - 16)))
+        /* 拖动期间面板跟手走（free），不让锚点重算把它拽回去 */
+        setFree(clampToScreen(e.clientX - d.dx, e.clientY - d.dy, d.w, Math.min(d.h, window.innerHeight - 16)))
       }
-      const endPanelDrag = () => { dragPanel.current = null }
+      const endPanelDrag = () => {
+        const d = dragPanel.current
+        const f = free
+        dragPanel.current = null
+        if (f) {
+          /* 松手：方块落到卡片下沿（下方没空间就上沿），这样收起后位置不跳 */
+          const h = Math.min((d && d.h) || 0, window.innerHeight - 16)
+          const y = f.y + h + 6 <= window.innerHeight - 8 ? f.y + h + 6 : f.y - PILL - 6
+          setPos({ x: clampX(f.x, PILL), y: clampY(y, PILL) })
+        }
+        setFree(null)
+      }
 
       const startRec = async () => {
         try {
@@ -345,26 +362,38 @@ window.__ModuleLoader__.load({
         if (j) { setDraft(''); setNotice('已锁定为任务条') }
       }
 
+      const openAt = (from) => {
+        const base = from || pos || { x: window.innerWidth - 74, y: window.innerHeight - 74 }
+        setPos({ x: clampX(base.x, PILL), y: clampY(base.y, PILL) })
+        setOpen(true)
+      }
+
       const collapse = () => {
         const el = panelRef.current
-        let p = pos || { x: window.innerWidth - 424, y: window.innerHeight - 420 }
         if (el) {
           const r = el.getBoundingClientRect()
-          p = dockToEdge(r)
+          /* 收起落回卡片下沿；若下方没空间就落到上沿，保持同一侧 */
+          const y = r.bottom + 6 <= window.innerHeight - 8 ? r.bottom + 6 : r.top - PILL - 6
+          setPos({ x: clampX(r.left, PILL), y: clampY(y, PILL) })
         }
-        setPos(p)
         setOpen(false)
       }
 
       const todoCount = data ? data.groups.reduce((n, g) => n + g.tasks.filter((t) => !t.done && t.status !== 'skipped').length, 0) : 0
 
-      const panelStyle = pos
-        ? { ...S.panel, left: Math.max(8, Math.min(pos.x, window.innerWidth - 412)), top: Math.max(8, Math.min(pos.y, window.innerHeight - 120)) }
-        : { ...S.panel, right: 20, bottom: 20 }
+      const panelStyle = free
+        ? { ...S.panel, left: free.x, top: free.y }
+        : pos
+          ? (() => {
+              const at = anchorPanel(pos)
+              return { ...S.panel, left: at.left, top: at.top }
+            })()
+          : { ...S.panel, right: 20, bottom: 20 }
 
       if (!open) {
-        // 收起 = 在原位缩成小方块（不在固定角落），并夹回可视区
-        const pillPos = pos ? clampToScreen(pos.x, pos.y, 46, 46) : { x: window.innerWidth - 66, y: window.innerHeight - 66 }
+        // 收起 = 卡片左上角变成小方块；贴边时贴同一条边，纵向跟卡片走
+        const base = pos || { x: window.innerWidth - 66, y: window.innerHeight - 66, side: 'free' }
+        const pillPos = { x: clampX(base.x, PILL), y: clampY(base.y, PILL) }
         return h('button',
           {
             style: {
@@ -388,16 +417,17 @@ window.__ModuleLoader__.load({
               const dx = e.clientX - d.sx
               const dy = e.clientY - d.sy
               if (!d.moved && Math.abs(dx) + Math.abs(dy) > 4) d.moved = true
-              if (d.moved) setPos(clampToScreen(d.ox + dx, d.oy + dy, 46, 46))
+              if (d.moved) {
+                const nx = clampX(d.ox + dx, PILL)
+                const ny = clampY(d.oy + dy, PILL)
+                setPos({ x: nx, y: ny, side: sideOfRect(nx, PILL), kind: 'pill' })
+              }
             },
             onPointerUp: (e) => {
               const d = pillDrag.current
               pillDrag.current = null
               try { e.currentTarget.releasePointerCapture(e.pointerId) } catch {}
-              if (d && !d.moved) {
-                setPos(pillPos)
-                setOpen(true)
-              }
+              if (d && !d.moved) openAt(pillPos)
             },
             onPointerCancel: () => { pillDrag.current = null },
             title: '任务树 · ' + todoCount + ' 项待办（点开 / 可拖动）',
